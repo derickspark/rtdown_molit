@@ -1,0 +1,33 @@
+Package: rtdown.molit
+Type: Package
+Title: Interactive MOLIT Apartment Real-Estate Transaction Downloader
+Version: 0.1.0
+Authors@R:
+    person("Derick S.", "Park", email = "soonmai@gmail.com",
+           role = c("aut", "cre"))
+Description: Interactive command-line downloader for the Korean Ministry of
+    Land, Infrastructure and Transport (MOLIT) apartment sale and rental
+    transaction APIs ('RTMSDataSvcAptTrade' and 'RTMSDataSvcAptRent').
+    The single entry point 'rtdown_apt()' walks the user through a
+    sequence of menu prompts (자료 유형 → 시도 → 시군구 또는 시도 전체 →
+    시작 연월 → 종료 연월) and returns a tidy 'tibble' of every
+    transaction in the requested range. Designed to be the simplest possible
+    front-end to the MOLIT public-data-portal APIs.
+License: MIT + file LICENSE
+URL: https://github.com/derickspark/rtdown_molit
+BugReports: https://github.com/derickspark/rtdown_molit/issues
+Encoding: UTF-8
+LazyData: false
+Depends:
+    R (>= 4.0)
+Imports:
+    httr2 (>= 1.0.0),
+    xml2,
+    tibble,
+    cli
+Suggests:
+    testthat (>= 3.0.0),
+    withr,
+    mockery
+Config/testthat/edition: 3
+RoxygenNote: 7.3.2
