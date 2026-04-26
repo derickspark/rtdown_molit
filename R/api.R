@@ -154,19 +154,47 @@
 }
 
 # 시군구 × 월 순회 → 단일 tibble.
+# verbose = TRUE 일 때 cli::cli_progress_bar 로 한 줄 진행 표시
+# (현재 항목 / 경과 / 남은 / 총 예상 시간) 를 같이 갱신한다.
 .run_download <- function(property, type,
                           lawd_codes, sigungu_names,
                           ymd_list, service_key,
                           timeout = 30L, verbose = TRUE) {
   total <- length(lawd_codes) * length(ymd_list)
+  property_label <- .PROPERTY_LABELS[[property]] %||% property
+  type_label <- if (type == "trade") "매매" else "전월세"
+
   if (isTRUE(verbose)) {
     cli::cli_alert_info(sprintf(
       "MOLIT %s %s API · 시군구 %d개 × 기간 %d개월 = 총 %d회 호출",
-      .PROPERTY_LABELS[[property]] %||% property,
-      if (type == "trade") "매매" else "전월세",
+      property_label, type_label,
       length(lawd_codes), length(ymd_list), total
     ))
   }
+
+  # 진행률 + 시간 표시 (한 줄에 in-place 갱신).
+  # 자료 수집 도중 현재 어떤 시군구·월을 호출하는지 (status), 누적
+  # 경과 시간 / 남은 예상 시간 (ETA) / 전체 예상 시간을 모두 보여준다.
+  pb <- NULL
+  if (isTRUE(verbose) && total > 0L) {
+    pb <- cli::cli_progress_bar(
+      name = sprintf("%s %s 다운로드", property_label, type_label),
+      total = total,
+      format = paste0(
+        "[{cli::pb_current}/{cli::pb_total}] {cli::pb_status}  ",
+        "\u2502 \uacbd\uacfc {cli::pb_elapsed} ",
+        "\u2502 \ub0a8\uc740 ~{cli::pb_eta} ",
+        "\u2502 \ucd1d ~{cli::pb_total_time}"
+      ),
+      format_done = paste0(
+        "{cli::pb_total}\ud68c \ud638\ucd9c \uc644\ub8cc \u00b7 ",
+        "\ucd1d \uc18c\uc694 {cli::pb_elapsed}"
+      ),
+      clear = FALSE,
+      .auto_close = FALSE
+    )
+  }
+
   pieces <- vector("list", total)
   failed <- list()
   k <- 0L
@@ -175,10 +203,11 @@
     sg_name <- sigungu_names[i]
     for (ymd in ymd_list) {
       k <- k + 1L
-      if (isTRUE(verbose)) {
-        cli::cli_alert(sprintf("[%d/%d] %s (%s) · %s",
-                               k, total,
-                               sg_name %||% sg_code, sg_code, ymd))
+      label <- sprintf("%s (%s) \u00b7 %s",
+                       sg_name %||% sg_code, sg_code, ymd)
+      # 진행 표시: 현재 호출 직전에 status 를 위치명으로 갱신.
+      if (!is.null(pb)) {
+        cli::cli_progress_update(id = pb, set = k - 1L, status = label)
       }
       tib <- tryCatch(
         .fetch_property(property = property, type = type,
@@ -192,14 +221,23 @@
             sigungu_nm = sg_name, deal_ymd = ymd, error = msg
           )
           if (isTRUE(verbose)) {
-            cli::cli_alert_warning(sprintf("  ↳ 실패: %s", msg))
+            cli::cli_alert_warning(sprintf("\u2197 %s \u00b7 \uc2e4\ud328: %s",
+                                           label, msg))
           }
           .empty_result(property, type, sg_code, sg_name, ymd)
         }
       )
       pieces[[k]] <- tib
+      # 호출 완료 후 카운트 +1 (시간 계산 포함 갱신).
+      if (!is.null(pb)) {
+        cli::cli_progress_update(id = pb, set = k, status = label)
+      }
     }
   }
+  if (!is.null(pb)) {
+    cli::cli_progress_done(id = pb)
+  }
+
   combined <- tryCatch(
     do.call(rbind, pieces),
     error = function(e) .empty_result(property, type)

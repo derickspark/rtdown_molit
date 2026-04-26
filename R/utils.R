@@ -40,9 +40,10 @@
 
 # ── 인터랙티브 입력 헬퍼 ───────────────────────────────────────────
 
-# 6자리 YYYYMM 을 표준입력에서 받는다. 형식이 틀리면 다시 묻는다.
+# 6자리 YYYYMM 을 표준입력에서 받는다. prompt 한 줄에 안내문이 포함되어
+# 사용자가 어떤 형식이 필요한지 입력 시점에 바로 보이도록 한다.
 # 빈 입력은 NULL 반환 (취소 시그널).
-.prompt_ymd <- function(prompt) {
+.prompt_ymd <- function(prompt = "YYYYMM 6자리 숫자 (예: 202501, 빈 입력=취소): ") {
   attempts <- 0L
   repeat {
     attempts <- attempts + 1L
@@ -65,6 +66,36 @@
     if (attempts >= 5L) {
       message("  입력 횟수 초과 — 취소합니다.")
       return(NULL)
+    }
+  }
+}
+
+# 메뉴 + 안내문이 입력 프롬프트와 같은 줄에 보이는 선택창.
+# `utils::menu()` 와 달리 prompt 문자열을 자유롭게 지정할 수 있어
+# (예: "다운로드할 자료 유형을 선택하세요 (1-2, 0=취소): ") 사용자가
+# 입력 시점에 무엇을 입력해야 하는지 바로 알 수 있다.
+#
+# 반환값: 1..length(choices) 또는 0L (취소).
+.menu_prompt <- function(choices, prompt, max_attempts = 5L) {
+  if (length(choices) == 0L) return(0L)
+  for (i in seq_along(choices)) {
+    cat(sprintf("  %2d: %s\n", i, choices[i]))
+  }
+  cat("   0: 취소\n")
+  attempts <- 0L
+  repeat {
+    attempts <- attempts + 1L
+    val <- trimws(readline(prompt))
+    if (val == "" || val == "0") return(0L)
+    n <- suppressWarnings(as.integer(val))
+    if (!is.na(n) && n >= 1L && n <= length(choices)) {
+      return(n)
+    }
+    cat(sprintf("  올바른 번호(1~%d, 0=취소)를 입력하세요.\n",
+                length(choices)))
+    if (attempts >= max_attempts) {
+      cat("  입력 횟수 초과 — 취소합니다.\n")
+      return(0L)
     }
   }
 }

@@ -30,7 +30,7 @@
 #' and never reads from `stdin` (useful for tests / scripting).
 #'
 #' @param type Optional `"trade"` (매매) or `"rent"` (전월세). If `NULL`,
-#'   asks via [utils::menu()].
+#'   shows an interactive menu prompt.
 #' @param sido_code Optional 2-digit 시도 code (e.g. `"11"`). If `NULL`, asks.
 #' @param sigungu Optional. `"all"` for the entire 시도, or a single 시군구
 #'   한글명 (e.g. `"강남구"`) — must be unique within the 시도. Mutually
@@ -146,16 +146,20 @@ rtdown_O <- function(type = NULL, sido_code = NULL, sigungu = NULL,
   # ── Step 1: 자료 유형 ──────────────────────────────────
   if (is.null(type)) {
     .require_interactive("자료 유형(type)")
-    cli::cli_h2(sprintf("[ 1 / 5 ] %s 자료 유형 선택", property_label))
+    cli::cli_h2(sprintf("[ 1 / 5 ] %s 자료 유형", property_label))
     api_label <- function(suffix) {
       sprintf("RTMSDataSvc%s%s", switch(property,
                                         apt = "Apt", rh = "RH",
                                         sh = "SH", offi = "Offi"), suffix)
     }
-    type_choice <- utils::menu(
-      c(sprintf("%s 매매 (%s)", property_label, api_label("Trade")),
-        sprintf("%s 전월세 (%s)", property_label, api_label("Rent"))),
-      title = "다운로드할 자료 유형을 선택하세요:"
+    type_choices <- c(
+      sprintf("%s 매매 (%s)", property_label, api_label("Trade")),
+      sprintf("%s 전월세 (%s)", property_label, api_label("Rent"))
+    )
+    type_choice <- .menu_prompt(
+      type_choices,
+      prompt = sprintf("%s 자료 유형을 선택하세요 (1-%d, 0=취소): ",
+                       property_label, length(type_choices))
     )
     if (type_choice == 0L) {
       cli::cli_alert_warning("취소되었습니다.")
@@ -170,9 +174,12 @@ rtdown_O <- function(type = NULL, sido_code = NULL, sigungu = NULL,
   sido_df <- rtdown_sido_table()
   if (is.null(sido_code) && is.null(lawd_cd)) {
     .require_interactive("시·도 (sido_code)")
-    cli::cli_h2("[ 2 / 5 ] 시·도 선택")
+    cli::cli_h2("[ 2 / 5 ] 시·도")
     labels <- sprintf("%s  (%s)", sido_df$sido_name, sido_df$sido_code)
-    sido_choice <- utils::menu(labels, title = "시·도를 선택하세요:")
+    sido_choice <- .menu_prompt(
+      labels,
+      prompt = sprintf("시·도를 선택하세요 (1-%d, 0=취소): ", length(labels))
+    )
     if (sido_choice == 0L) {
       cli::cli_alert_warning("취소되었습니다.")
       return(invisible(NULL))
@@ -197,14 +204,16 @@ rtdown_O <- function(type = NULL, sido_code = NULL, sigungu = NULL,
   }
   if (is.null(lawd_cd) && is.null(sigungu)) {
     .require_interactive("시·군·구 (sigungu / lawd_cd)")
-    cli::cli_h2("[ 3 / 5 ] 시·군·구 선택")
-    options <- c(
+    cli::cli_h2("[ 3 / 5 ] 시·군·구")
+    sg_choices <- c(
       sprintf("(전체) %s 산하 %d개 시군구", sido_name, nrow(sg_df)),
       sprintf("%s  (%s)", sg_df$sigungu_name, sg_df$lawd_cd)
     )
-    sg_choice <- utils::menu(
-      options,
-      title = sprintf("%s 의 시·군·구를 선택하세요:", sido_name)
+    sg_choice <- .menu_prompt(
+      sg_choices,
+      prompt = sprintf(
+        "%s 의 시·군·구를 선택하세요 (1=전체, 2-%d=개별, 0=취소): ",
+        sido_name, length(sg_choices))
     )
     if (sg_choice == 0L) {
       cli::cli_alert_warning("취소되었습니다.")
@@ -260,18 +269,20 @@ rtdown_O <- function(type = NULL, sido_code = NULL, sigungu = NULL,
   # ── Step 4: 시작 YYYYMM ────────────────────────────────
   if (is.null(ymd_from)) {
     .require_interactive("시작 연월 (ymd_from)")
-    cli::cli_h2("[ 4 / 5 ] 시작 연월 입력")
-    cat("YYYYMM 6자리 숫자로 입력하세요 (예: 202501)\n")
-    ymd_from <- .prompt_ymd("시작 연월: ")
+    cli::cli_h2("[ 4 / 5 ] 시작 연월")
+    ymd_from <- .prompt_ymd(
+      "시작 연월 (YYYYMM 6자리 숫자, 예: 202501, 빈 입력=취소): "
+    )
     if (is.null(ymd_from)) return(invisible(NULL))
   }
 
   # ── Step 5: 종료 YYYYMM ────────────────────────────────
   if (is.null(ymd_to)) {
     .require_interactive("종료 연월 (ymd_to)")
-    cli::cli_h2("[ 5 / 5 ] 종료 연월 입력")
-    cat("YYYYMM 6자리 숫자로 입력하세요 (예: 202604)\n")
-    ymd_to <- .prompt_ymd("종료 연월: ")
+    cli::cli_h2("[ 5 / 5 ] 종료 연월")
+    ymd_to <- .prompt_ymd(
+      "종료 연월 (YYYYMM 6자리 숫자, 예: 202604, 빈 입력=취소): "
+    )
     if (is.null(ymd_to)) return(invisible(NULL))
   }
 

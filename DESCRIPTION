@@ -1,7 +1,7 @@
 Package: rtdown.molit
 Type: Package
 Title: Interactive MOLIT Real-Estate Transaction Downloader
-Version: 0.2.0
+Version: 0.3.0
 Authors@R:
     person("Derick S.", "Park", email = "soonmai@gmail.com",
            role = c("aut", "cre"))
