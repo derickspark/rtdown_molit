@@ -107,6 +107,24 @@
   tolower(ans) %in% c("y", "yes", "예", "ㅇ")
 }
 
+# 사람이 읽기 좋은 시간 포맷 ("?", "12s", "5m 30s", "1h 23m 4s")
+.fmt_secs <- function(s) {
+  if (is.null(s) || length(s) == 0L) return("?")
+  s <- suppressWarnings(as.numeric(s))
+  if (length(s) != 1L || is.na(s) || !is.finite(s) || s < 0) return("?")
+  if (s < 60) return(sprintf("%.0fs", s))
+  if (s < 3600) {
+    m <- floor(s / 60)
+    ss <- round(s - m * 60)
+    return(sprintf("%dm %ds", m, ss))
+  }
+  h <- floor(s / 3600)
+  rem <- s - h * 3600
+  m <- floor(rem / 60)
+  ss <- round(rem - m * 60)
+  sprintf("%dh %dm %ds", h, m, ss)
+}
+
 # ── 행(row) 변환 ───────────────────────────────────────────────────
 
 .row_get <- function(row, key) {

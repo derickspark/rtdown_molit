@@ -1,3 +1,15 @@
+# rtdown.molit 0.3.1
+
+* **버그 수정** — `cli::pb_total_time` 토큰이 cli 패키지에 존재하지 않아
+  `rtdown_apt()` / `rtdown_RH()` / `rtdown_SH()` / `rtdown_O()` 호출 시
+  진행 표시 갱신에서 `'pb_total_time' is not an exported object from
+  'namespace:cli'` 오류가 발생하던 문제를 수정. 빌트인 토큰 대신 매
+  반복마다 `elapsed × total / k` 로 총 예상 시간을 직접 계산해
+  `pb_extra$total` 로 주입한다. 새 헬퍼 `.fmt_secs()` 추가
+  (예: `"5m 30s"`, `"1h 23m 4s"`).
+* `cli (>= 3.4.0)` 으로 버전 제약 추가 — `cli_progress_update(extra = ...)`
+  지원이 필요하다.
+
 # rtdown.molit 0.3.0
 
 * **다운로드 진행 표시 + 시간** — `verbose = TRUE` 일 때 한 줄에 in-place

@@ -175,8 +175,12 @@
   # 진행률 + 시간 표시 (한 줄에 in-place 갱신).
   # 자료 수집 도중 현재 어떤 시군구·월을 호출하는지 (status), 누적
   # 경과 시간 / 남은 예상 시간 (ETA) / 전체 예상 시간을 모두 보여준다.
+  # cli 빌트인 토큰은 pb_elapsed / pb_eta 까지만 있고 "총 시간" 은 없으므로,
+  # `extra = list(total = ...)` 로 직접 계산해 주입한다.
   pb <- NULL
+  start_time <- NULL
   if (isTRUE(verbose) && total > 0L) {
+    start_time <- Sys.time()
     pb <- cli::cli_progress_bar(
       name = sprintf("%s %s 다운로드", property_label, type_label),
       total = total,
@@ -184,12 +188,13 @@
         "[{cli::pb_current}/{cli::pb_total}] {cli::pb_status}  ",
         "\u2502 \uacbd\uacfc {cli::pb_elapsed} ",
         "\u2502 \ub0a8\uc740 ~{cli::pb_eta} ",
-        "\u2502 \ucd1d ~{cli::pb_total_time}"
+        "\u2502 \ucd1d ~{cli::pb_extra$total}"
       ),
       format_done = paste0(
         "{cli::pb_total}\ud68c \ud638\ucd9c \uc644\ub8cc \u00b7 ",
         "\ucd1d \uc18c\uc694 {cli::pb_elapsed}"
       ),
+      extra = list(total = "?"),
       clear = FALSE,
       .auto_close = FALSE
     )
@@ -228,9 +233,20 @@
         }
       )
       pieces[[k]] <- tib
-      # 호출 완료 후 카운트 +1 (시간 계산 포함 갱신).
+      # 호출 완료 후: 카운트 +1 + 총 시간 추정값 갱신.
       if (!is.null(pb)) {
-        cli::cli_progress_update(id = pb, set = k, status = label)
+        elapsed_s <- as.numeric(
+          difftime(Sys.time(), start_time, units = "secs")
+        )
+        total_str <- if (k >= 1L && elapsed_s > 0) {
+          .fmt_secs(elapsed_s * total / k)
+        } else {
+          "?"
+        }
+        cli::cli_progress_update(
+          id = pb, set = k, status = label,
+          extra = list(total = total_str)
+        )
       }
     }
   }
